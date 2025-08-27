@@ -1,4 +1,4 @@
-CFLAGS=-Wall -g -ggdb3 -O0 -lnuma
+CFLAGS=-Wall -g -ggdb3 -O0 -lnuma -std=c++11
 LDFLAGS=-lnuma
 
 .PHONY: all clean

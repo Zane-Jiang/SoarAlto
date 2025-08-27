@@ -2,8 +2,8 @@
 VMTOUCH="/usr/bin/vmtouch"
 RUNDIR=$(echo "$(dirname "$PWD")")
 RSTDIR=$PWD
-INTERCF="$RUNDIR/interc/ldlib.so"
-MLC="$RUNDIR/mlc"
+INTERCF="/home/jz/PaperLab/SoarAlto/src/soar/interc/ldlib.so"
+MLC="/home/cxl_public/mlc/Linux/mlc"
 PERF="/tdata/linux/tools/perf/perf"
 NOMAD_MOD="$RUNDIR/nomad_module/async_promote.ko"
 COLLOID_DIR="$RUNDIR/colloid/tpp"
@@ -81,9 +81,12 @@ perf_events="${perf_events}"",cycles,CYCLE_ACTIVITY.STALLS_L3_MISS"
 perf_events="${perf_events}"",OFFCORE_REQUESTS_OUTSTANDING.DEMAND_DATA_RD"
 perf_events="${perf_events}"",OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD,OFFCORE_REQUESTS.DEMAND_DATA_RD"
 
+GAPBS_DIR="/home/jz/PaperLab/SoarAlto/benchmark/gapbs"
+GAPBS_GRAPH_DIR="/home/jz/public_bench/gapbs/"
+
 load_data() {
   echo "LOAD ..."
-  numactl --membind 1 ${VMTOUCH} -f -t /mnt/sda4/gapbs/benchmark/graphs/urand.sg -m 64G
+  numactl --membind 0 ${VMTOUCH} -f -t ${GAPBS_GRAPH_DIR}/GAP-urand.sg -m 64G
   sleep 3
 }
 

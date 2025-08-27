@@ -36,6 +36,10 @@ static int first_pid;
 static int __thread nb_allocs = 0;
 #endif
 
+#define MAX_LINES 1000
+#define MAX_NAME_LENGTH 20
+char *obj_names[MAX_LINES];
+
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int __thread pid;
 static int __thread tid;
@@ -167,27 +171,29 @@ int _getpid()
 int check_trace(void *string, size_t sz)
 {
     char *ptr = (char *) string;
-    char *objs[] = {"405fb2", "406d68", "406fe7", "406d27", \
-        "40b69c", "406cc3", "406db6", "40b62e"};
+    char *objs[] = {"405d7a", "40dc7f", "406eb4", "406ef8", \
+        "40dc14", "406e56", "407307", "406f46"};
+        
     int start = 0;
-    int end = 8;
+    int end = 12;
     int k1 = 7;
-    int k2 = 8;
+    int k2 = 10;
     for (int i = start; i < k1; i += 1) {
-        if (strstr(ptr, objs[i]) != NULL) {
+        if (strstr(ptr, obj_names[i]) != NULL) {
             return 0;
         }
     }
     for (int i = k1; i < k2; i += 1) {
-        if (strstr(ptr, objs[i]) != NULL) {
+        if (strstr(ptr, obj_names[i]) != NULL) {
             return -1;
         }
     }
     for (int i = k2; i < end; i += 1) {
-        if (strstr(ptr, objs[i]) != NULL) {
+        if (strstr(ptr, obj_names[i]) != NULL) {
             return 1;
         }
     }
+    
     return -1;
 }
 
@@ -432,6 +438,53 @@ void __attribute__((destructor)) bye(void)
     bye_done = 1;
 }
 
+int read_score(){
+    FILE *file;
+    char line[256];
+    int count = 0;
+    
+    file = fopen("/home/jz/PaperLab/SoarAlto/src/soar/run/rst/obj_stat.csv", "r");
+    if (file == NULL) {
+        printf("Can not open file.\n");
+        return 1;
+    }
+    
+    if (fgets(line, sizeof(line), file) == NULL) {
+        printf("File is empty.\n");
+        fclose(file);
+        return 1;
+    }
+    
+
+    while (fgets(line, sizeof(line), file) != NULL && count < MAX_LINES) {
+        char *token;
+        int column = 0;
+        char obj_name[MAX_NAME_LENGTH];
+        
+
+        token = strtok(line, ",");
+        
+        while (token != NULL && column < 5) { 
+            if (column == 1) { 
+                if (strncmp(token, "0x", 2) == 0) {
+                    strncpy(obj_name, token + 2, MAX_NAME_LENGTH - 1);
+                } else {
+                    strncpy(obj_name, token, MAX_NAME_LENGTH - 1);
+                }
+                obj_name[MAX_NAME_LENGTH - 1] = '\0'; 
+                
+                obj_names[count] = (char*)malloc(strlen(obj_name) + 1);
+                strcpy(obj_names[count], obj_name);
+            }
+            token = strtok(NULL, ",");
+            column++;
+        }
+        count++;
+    }
+    
+    fclose(file);
+}
+
 void __attribute__((constructor)) m_init(void)
 {
     libc_malloc = (void * ( *)(size_t))dlsym(RTLD_NEXT, "malloc");
@@ -443,4 +496,6 @@ void __attribute__((constructor)) m_init(void)
     libc_mmap64 = (void * ( *)(void *, size_t, int, int, int, off_t))dlsym(RTLD_NEXT, "mmap64");
     libc_memalign = (void * ( *)(size_t, size_t))dlsym(RTLD_NEXT, "memalign");
     libc_posix_memalign = (int ( *)(void **, size_t, size_t))dlsym(RTLD_NEXT, "posix_memalign");
+
+    read_score();
 }

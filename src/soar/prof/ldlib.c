@@ -85,7 +85,7 @@ static int (*libc_posix_memalign)(void **, size_t, size_t);
 FILE *open_file(int tid)
 {
     char buff[125];
-    sprintf(buff, "/mnt/sda4/data.raw.%d", tid);
+    sprintf(buff, "/home/jz/profdata/data.raw.%d", tid);
 
     FILE *dump = fopen(buff, "a+");
     if (!dump) {
