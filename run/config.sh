@@ -102,7 +102,7 @@ check_cxl_conf()
   disable_thp
   disable_ht
   disable_turbo
-  disable_swap
+  # disable_swap
   check_pmqos
   configure_cxl_exp_cores
 }
@@ -117,7 +117,7 @@ check_conf()
   disable_ht
   disable_turbo
   check_pmqos
-  disable_swap
+  # disable_swap
 }
 
 monitor_resource_util()

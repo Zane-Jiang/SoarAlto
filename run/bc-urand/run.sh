@@ -4,7 +4,7 @@ RUNDIR=$(echo "$(dirname "$PWD")")
 RSTDIR=$PWD
 INTERCF="/home/jz/PaperLab/SoarAlto/src/soar/interc/ldlib.so"
 MLC="/home/cxl_public/mlc/Linux/mlc"
-PERF="/tdata/linux/tools/perf/perf"
+PERF="/usr/bin/perf"
 NOMAD_MOD="$RUNDIR/nomad_module/async_promote.ko"
 COLLOID_DIR="$RUNDIR/colloid/tpp"
 export BPFTRACE="$RUNDIR/bpftrace/bpftrace"
@@ -67,9 +67,9 @@ done
 echo ""
 
 source $RUNDIR/config.sh || exit
-echo "Checking modify-uncore-freq.sh ..."
-[[ -e "modify-uncore-freq.sh" ]] || exit
-./modify-uncore-freq.sh 2000000 2000000 500000 500000
+# echo "Checking modify-uncore-freq.sh ..."
+# [[ -e "modify-uncore-freq.sh" ]] || exit
+# ./modify-uncore-freq.sh 2000000 2000000 500000 500000
 
 echo "Checking MLC ..."
 [[ -e $MLC ]] || exit
@@ -124,7 +124,7 @@ prologue() {
     echo "Finished checking"
     echo 1 | sudo tee /sys/kernel/mm/numa/demotion_enabled
     echo 2 | sudo tee /proc/sys/kernel/numa_balancing
-    swapoff -a
+    # swapoff -a
     echo 1000 | sudo tee /proc/sys/vm/demote_scale_factor
   elif [[ $ttype == 4 || $ttype == 8 ]]; then
     echo 1 | sudo tee /sys/kernel/mm/numa/demotion_enabled
@@ -206,9 +206,9 @@ run() {
   if [[ $ttype == 9 ]]; then
     prefix="numactl -N0 -m0"
   elif [[ $ttype == 10 ]]; then
-    prefix="numactl -N0 -m1"
+    prefix="numactl -N0 -m2"
   fi
-  time $prefix $PERF stat -e ${perf_events} -I 1000 -o $perff ${soar_env} /mnt/sda4/gapbs/bc -f /mnt/sda4/gapbs/benchmark/graphs/urand.sg -i4 -n1 > $outf 2>&1 &
+  time $prefix $PERF stat -e ${perf_events} -I 1000 -o $perff ${soar_env} ${GAPBS_DIR}/bc -f ${GAPBS_GRAPH_DIR}/GAP-urand.sg -i4 -n1 > $outf 2>&1 &
   pid1=$!
   echo "pid1[$pid1]"
 
@@ -234,7 +234,8 @@ run() {
   fi
 
   sleep 10
-  gpid1=$(ps axf | grep /mnt/sda4/gapbs/bc | grep -v grep | awk '{print $1}' | tail -n1)
+  gpid1=$pid1
+  # gpid1=$(ps axf | grep /mnt/sda4/gapbs/bc | grep -v grep | awk '{print $1}' | tail -n1)
   sleep 15
   local_free1=$(numastat -p $gpid1 | tail -n1 | awk '{print $2}')
   echo "local_free1 ${local_free1}" | tee $memf
