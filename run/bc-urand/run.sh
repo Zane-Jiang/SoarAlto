@@ -82,11 +82,11 @@ perf_events="${perf_events}"",OFFCORE_REQUESTS_OUTSTANDING.DEMAND_DATA_RD"
 perf_events="${perf_events}"",OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD,OFFCORE_REQUESTS.DEMAND_DATA_RD"
 
 GAPBS_DIR="/home/jz/PaperLab/SoarAlto/benchmark/gapbs"
-GAPBS_GRAPH_DIR="/home/jz/public_bench/gapbs/"
+GAPBS_GRAPH_DIR="/home/jz/public_bench/gapbs"
 
 load_data() {
   echo "LOAD ..."
-  numactl --membind 0 ${VMTOUCH} -f -t ${GAPBS_GRAPH_DIR}/GAP-urand.sg -m 64G
+  numactl --membind 0 ${VMTOUCH} -f -t ${GAPBS_GRAPH_DIR}/urand.sg -m 64G
   sleep 3
 }
 
@@ -206,9 +206,11 @@ run() {
   if [[ $ttype == 9 ]]; then
     prefix="numactl -N0 -m0"
   elif [[ $ttype == 10 ]]; then
-    prefix="numactl -N0 -m2"
+    prefix="numactl -N0 -m1"
   fi
+  echo "[Exec command]:[$prefix $PERF stat -e ${perf_events} -I 1000 -o $perff ${soar_env} ${GAPBS_DIR}/bc -f ${GAPBS_GRAPH_DIR}/GAP-urand.sg]  -i4 -n1 > $outf 2>&1 &"
   time $prefix $PERF stat -e ${perf_events} -I 1000 -o $perff ${soar_env} ${GAPBS_DIR}/bc -f ${GAPBS_GRAPH_DIR}/GAP-urand.sg -i4 -n1 > $outf 2>&1 &
+  
   pid1=$!
   echo "pid1[$pid1]"
 

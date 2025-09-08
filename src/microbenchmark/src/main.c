@@ -96,7 +96,7 @@ void verify(header_t *header)
             printf("ERROR %lu, %lu\n", i, (unsigned long)curr_ptr->ptr_arr[3]);
             break;
         }
-        curr_ptr->ptr_arr[3] = (int)curr_ptr->ptr_arr[3] + 1;
+        curr_ptr->ptr_arr[3] = curr_ptr->ptr_arr[3] + 1;
         next_ptr = curr_ptr->ptr_arr[0];
         i += 1;
         curr_ptr = next_ptr;

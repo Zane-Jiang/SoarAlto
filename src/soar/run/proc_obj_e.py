@@ -102,7 +102,7 @@ def process_file(filename):
 
 def get_alloc_data(df, df_addr):
   # [time, size, addr, type, obj_name]
-  max_time = df_addr.select(pl.col("time").max()).item()
+  max_time = df_addr.select(pl.col("time").max()).item()#最后访问的时间作为最大值
   print("max_time", max_time)
   allocs = df.filter(pl.col("type") != 2)
   time_log("AFTER allocs")
@@ -119,7 +119,7 @@ def get_alloc_data(df, df_addr):
     right_on="dealloc_time",
     by="addr",
     strategy="forward"
-  )
+  )#匹配对象生命周期
 
   print(joined)
 
@@ -169,14 +169,14 @@ def check_obj_accesses_perf_with_addr_range_t(data):
     accesses_perf.append({})
   for row in df_obj_deletes.iter_rows():
     start_time, end_time, addr, size, obj_name = row
-    low_index, high_index = find_idx_in_range(new_ts, start_time, end_time)
+    low_index, high_index = find_idx_in_range(new_ts, start_time, end_time)#每个对象所占的时间戳序号（时间窗口时间）
     for idx in range(low_index, high_index):
       start_t = new_ts[idx]
       if idx+1 == high_index:
         end_t = new_ts[idx]
       else:
         end_t = new_ts[idx+1]
-      start_index, end_index = find_idx_in_range(all_time, start_t, end_t)
+      start_index, end_index = find_idx_in_range(all_time, start_t, end_t)#每个时间窗口内， 对象在访存序列中所占的时间
       cnt = 0
       for j in range(start_index, end_index):
         if all_addr[j] >= addr and all_addr[j] <= addr + size:
@@ -190,7 +190,7 @@ def check_obj_accesses_perf_with_addr_range_t(data):
   for i in range(len(new_ts)):
     for obj in obj_set:
       if obj in accesses_perf[i].keys():
-        merged = merge_intervals(accesses_perf[i][obj][1])
+        merged = merge_intervals(accesses_perf[i][obj][1]) #合并地址重叠区间 不是很理解为什么要这一步？
         accesses_perf[i][obj][1] = merged
   return accesses_perf
 
@@ -325,21 +325,26 @@ def rank_objs_r(accesses_perf_with_addr_range, new_ts, est_dram_sd, a_lat, is_ml
     print(o)
     obj_scores[o] = 0
     obj_time_span[o] = 0
+  #初始化序列对象
   for i in range(len(accesses_perf_with_addr_range)):
     content = accesses_perf_with_addr_range[i]
+    # print("rank_objs_r accesses_perf_with_addr_range" + content)
     if len(content) > 0:
       all_acc = 0
       for obj1 in content.keys():
-        all_acc += content[obj1][0]
+        all_acc += content[obj1][0] #计算总访存次数
       has_mlp = 0
       for obj2 in content.keys():
-        if all_acc > 0 and a_lat[i] <= 80:
+        if all_acc > 0 and a_lat[i] <= 80:#检测条件不容易判断
           has_mlp = 1
+
       for obj in content.keys():
         if all_acc == 0:
           obj_scores[obj] += 0
         else:
           if is_mlp:
+
+            #基于AOL确定规模因子
             factor = 1
             min_ratio = 0.03
             max_ratio = 0.7
@@ -353,20 +358,23 @@ def rank_objs_r(accesses_perf_with_addr_range, new_ts, est_dram_sd, a_lat, is_ml
               factor = 8
             else:
               factor = 12
+
             if has_mlp > 0:
-              if content[obj][0]/all_acc >= max_ratio:
-                obj_scores[obj] += ((content[obj][0]/all_acc) * est_dram_sd[i]) / factor
+              R = content[obj][0]/all_acc 
+              if R >= max_ratio:
+                obj_scores[obj] += (R * est_dram_sd[i]) / factor
               elif content[obj][0]/all_acc >= min_ratio:
-                obj_scores[obj] += ((content[obj][0]/all_acc) * est_dram_sd[i])
+                obj_scores[obj] += (R * est_dram_sd[i])
               else:
-                obj_scores[obj] += ((content[obj][0]/all_acc) * est_dram_sd[i]) * factor
+                obj_scores[obj] += (R* est_dram_sd[i]) * factor
             else:
-              obj_scores[obj] += (content[obj][0]/all_acc) * est_dram_sd[i]
+              obj_scores[obj] += R * est_dram_sd[i]
           else:
             obj_scores[obj] += content[obj][0]
         obj_time_span[obj] += 1
   return obj_scores, obj_time_span
 
+#统计每个对象在运行过程中，被访问过的最大地址区间长度
 def get_max_range_for_objs(accesses_perf_with_addr_range, new_ts, est_dram_sd):
   obj_max_range = {}
   obj_time_span = {}
@@ -559,22 +567,26 @@ def main():
   start_time = df_obj_deletes.select(pl.col("alloc_time").min()).item()
   end_time = df_obj_deletes.select(pl.col("dealloc_time").max()).item()
 
+# 4.加载stall_perf stat data
   # [time, size, addr, type, obj_name]
   perf_data = process_perf("perf.data")
 
   perf_interval = int((end_time - start_time) / len(perf_data[events[0]]))
-  new_ts = [t for t in range(int(start_time), int(end_time), perf_interval)]
+  new_ts = [t for t in range(int(start_time), int(end_time), perf_interval)] #时间序列
   new_ts = new_ts[:-1]
+
   demand_data_rd_idx = events.index("OFFCORE_REQUESTS.DEMAND_DATA_RD")
   cyc_demand_data_rd_idx = events.index("OFFCORE_REQUESTS_OUTSTANDING.CYCLES_WITH_DEMAND_DATA_RD")
   l3_stall_idx = events.index("CYCLE_ACTIVITY.STALLS_L3_MISS")
   cyc_idx = events.index("cycles")
+
   demand_data_rd = np.asarray(perf_data[events[demand_data_rd_idx]])
   cyc_demand_data_rd = np.asarray(perf_data[events[cyc_demand_data_rd_idx]])
   l3_stall = np.asarray(perf_data[events[l3_stall_idx]])
   cyc = np.asarray(perf_data[events[cyc_idx]])
 
-  l3_stall_per_cyc = l3_stall/cyc
+  #数组序列
+  l3_stall_per_cyc = l3_stall/cyc 
   a_lat = cyc_demand_data_rd/demand_data_rd  #aol
   est_dram_sd_2 = [l3_stall_per_cyc[i]/(24.67/a_lat[i]+0.87) for i in range(len(a_lat))] ## 预测减速
 
@@ -588,39 +600,41 @@ def main():
 
   print("BEFORE check_obj_accesses_perf")
   accesses_perf_with_addr_range = check_obj_accesses_perf_with_addr_range_p(all_time, all_addr, new_ts)
-  print("aaaaaaaaaaaa")
-  print(accesses_perf_with_addr_range)
+  #每个对象每个时间段的访问次数
   time_log("Returned accesses_perf_with_addr_range")
   print("AFTER check_obj_accesses_perf")
 
   accs = []
   objs = []
   for obj in obj_set:
-    acc = check_obj_access(accesses_perf_with_addr_range, obj)
+    acc = check_obj_access(accesses_perf_with_addr_range, obj)#acc = [[t,cnt],]
     accs.append(acc)
     objs.append(obj)
     plot_acc(acc, obj, plots_path)
   plot_acc_all(accs, objs, plots_path)
   plot_acc_all_aol(accs, objs, plots_path, a_lat)
 
-  print("-----------------------------")
+  print("---------Get obj score by AOL-------------")
+  #obj_time_span 每个对象所占的时间片数量
   obj_scores, obj_time_span = rank_objs_r(accesses_perf_with_addr_range, new_ts, est_dram_sd_2, a_lat, True)
   print(obj_scores)
   create_obj_rank_csv(obj_scores, "obj_scores.csv")
-  print(obj_time_span)
+  
 
   ranked_obj_scores = rank_dict_values(obj_scores)
   print(ranked_obj_scores)
   create_obj_rank_csv(ranked_obj_scores, "ranked_obj_scores.csv")
 
-  print("-----------------------------")
+  print("---------Get obj stall by count -------------")
   obj_max_range = get_max_range_for_objs(accesses_perf_with_addr_range, new_ts, est_dram_sd_2)
   print(obj_max_range)
   create_obj_rank_csv(obj_max_range, "obj_max_range.csv")
 
+  #计算每个地址范围的分数s_per_range
   objs, scores, max_range, s_per_range, time_span = process_all(obj_scores, obj_time_span, ranked_obj_scores, obj_max_range)
   create_obj_stat_csv([objs, scores, max_range, s_per_range, time_span], "obj_stat.csv")
 
+  #按照次数统计时的对象排序
   obj_scores, _ = rank_objs_r(accesses_perf_with_addr_range, new_ts, est_dram_sd_2, a_lat, False)
   create_obj_rank_csv(obj_scores, "obj_scores_n.csv")
 

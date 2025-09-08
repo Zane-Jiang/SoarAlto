@@ -170,6 +170,7 @@ int _getpid()
 
 int check_trace(void *string, size_t sz)
 {
+    return -1;
     char *ptr = (char *) string;
     char *objs[] = {"405d7a", "40dc7f", "406eb4", "406ef8", \
         "40dc14", "406e56", "407307", "406f46"};
@@ -483,6 +484,7 @@ int read_score(){
     }
     
     fclose(file);
+    return 0;
 }
 
 void __attribute__((constructor)) m_init(void)

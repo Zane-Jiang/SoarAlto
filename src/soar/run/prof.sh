@@ -13,12 +13,12 @@ GAPBS_GRAPH_DIR="/home/jz/public_bench/gapbs/"
 check_cxl_conf
 flush_fs_caches
 
-numactl --membind 0 ${VMTOUCH} -f -t ${GAPBS_GRAPH_DIR}/GAP-urand.sg -m 64G
+numactl --membind 0 ${VMTOUCH} -f -t ${GAPBS_GRAPH_DIR}/urand.sg -m 64G
 
 sleep 1
 echo "START ..."
 
-env  LD_PRELOAD="../prof/ldlib.so" ${GAPBS_DIR}/bc -f ${GAPBS_GRAPH_DIR}/GAP-urand.sg -i4 -n1 2>&1 > log &
+env  LD_PRELOAD="../prof/ldlib.so" ${GAPBS_DIR}/bc -f ${GAPBS_GRAPH_DIR}/urand.sg -i4 -n1 2>&1 > log &
 cpid=$!
 sleep 1
 
